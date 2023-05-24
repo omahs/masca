@@ -52,8 +52,9 @@
     <select id="didMethod">
       <option value="did:ethr">did:ethr</option>
       <option value="did:key">did:key</option>
-      <option value="did:key:ebsi">did:key:ebsi</option>
+      <option value="did:key:ebsi">did:key (ebsi)</option>
       <option value="did:ebsi">did:ebsi</option>
+      <option value="did:cheqd">did:cheqd</option>
       <option value="did:pkh">did:pkh</option>
       <option value="did:github">did:gh</option>
     </select>
@@ -181,6 +182,23 @@
     toggleVCStoreBtn.addEventListener('click', toggleVCStore);
     getavaiVCstoreBtn.addEventListener('click', getAvailableVCStores);
 
+    window.ethereum.on('accountsChanged', (...accounts) => {
+      account = (accounts[0])[0];
+      ethereum.request({
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId: snapId,
+          request: {
+            method: 'setCurrentAccount',
+            params: {
+              currentAccount: account
+            }
+          },
+        },
+      });
+      console.log('account changed to ', account);
+    });
+
     // here we get permissions to interact with and install the snap
     async function connect() {
       console.log('snap id', snapId);
@@ -194,6 +212,21 @@
           [snapId]: { version: 'latest' },
         },
       });
+      let account = (await ethereum.request({ method: 'eth_requestAccounts' }))[0];
+      
+      await ethereum.request({
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId: snapId,
+          request: {
+            method: 'setCurrentAccount',
+            params: {
+              currentAccount: account
+            }
+          },
+        },
+      });
+      console.log("current account set to: ", account);
     }
 
     async function getDID() {
@@ -285,20 +318,6 @@
       const method = document.getElementById('didMethod').value;
       console.log('selected method', method);
       let response;
-      if (method === 'did:ebsi') {
-        response = await ethereum.request({
-          method: 'wallet_invokeSnap',
-          params: {
-            snapId: snapId,
-            request: {
-              method: 'switchDIDMethod',
-              params: {
-                didMethod: method,
-              },
-            },
-          },
-        });
-      }
       response = await ethereum.request({
         method: 'wallet_invokeSnap',
         params: {
