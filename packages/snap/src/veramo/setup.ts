@@ -6,6 +6,11 @@ import {
   DataManager,
   IDataManager,
 } from '@blockchain-lab-um/veramo-datamanager';
+import {
+  CheqdDIDProvider,
+  getResolver as cheqdDidResolver,
+} from '@cheqd/did-provider-cheqd';
+// import { CheqdNetwork } from '@cheqd/sdk';
 import { MetaMaskInpageProvider } from '@metamask/providers';
 import { SnapsGlobalObject } from '@metamask/snaps-types';
 import {
@@ -49,6 +54,7 @@ import { getResolver as ethrDidResolver } from 'ethr-did-resolver';
 // import { ebsiDidResolver } from '../did/ebsi/ebsiDidResolver';
 import { KeyDIDProvider } from '../did/key/keyDidProvider';
 import { getDidKeyResolver as keyDidResolver } from '../did/key/keyDidResolver';
+import { getAddressKeyDeriver, snapGetKeysFromAddress } from '../utils/keyPair';
 import { getCurrentAccount, getEnabledVCStores } from '../utils/snapUtils';
 import { getSnapState } from '../utils/stateUtils';
 import { CeramicVCStore } from './plugins/ceramicDataStore/ceramicDataStore';
@@ -101,6 +107,26 @@ export const getAgent = async (
     networks,
   });
 
+  if (state.accountState[account].accountConfig.ssi.didMethod === 'did:cheqd') {
+    const bip44CoinTypeNode = await getAddressKeyDeriver({
+      state,
+      snap,
+      account,
+    });
+    const res = await snapGetKeysFromAddress(
+      bip44CoinTypeNode,
+      state,
+      account,
+      snap
+    );
+    if (!res) throw new Error('Failed to get keys');
+    const privateKey = res.privateKey.split('0x')[1];
+    console.log('private key: ', privateKey);
+    didProviders['did:cheqd'] = new CheqdDIDProvider({
+      defaultKms: 'web3',
+      cosmosPayerSeed: privateKey,
+    });
+  }
   didProviders['did:key'] = new KeyDIDProvider({ defaultKms: 'web3' });
   didProviders['did:pkh'] = new PkhDIDProvider({ defaultKms: 'web3' });
   // didProviders['did:ebsi'] = new EbsiDIDProvider({ defaultKms: 'web3' });
@@ -137,6 +163,7 @@ export const getAgent = async (
           ...ethrDidResolver({ networks }),
           ...keyDidResolver(),
           ...pkhDidResolver(),
+          ...cheqdDidResolver(),
           // ...ebsiDidResolver(),
           ...jwkDidResolver(),
         }),

@@ -8,6 +8,7 @@ import { SnapsGlobalObject } from '@metamask/snaps-types';
 import { IIdentifier } from '@veramo/core';
 import { DIDResolutionResult } from 'did-resolver';
 
+import { getDidCheqdIdentifier } from '../did/cheqd/cheqdDidUtils';
 import { getDidJwkIdentifier } from '../did/jwk/jwkDidUtils';
 import { getDidKeyIdentifier } from '../did/key/keyDidUtils';
 import { MascaState } from '../interfaces';
@@ -47,6 +48,10 @@ export async function getCurrentDid(params: {
   if (method === 'did:key') {
     const didUrl = getDidKeyIdentifier(state, account);
     return `did:key:${didUrl}`;
+  }
+  if (method === 'did:cheqd') {
+    const didUrl = await getDidCheqdIdentifier({ snap, ethereum });
+    return `did:cheqd:${didUrl}`;
   }
   // if (method === 'did:key:ebsi') {
   //   const didUrl = getDidEbsiKeyIdentifier(state, account);

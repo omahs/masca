@@ -40,6 +40,7 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
   request,
   origin,
 }): Promise<Result<unknown>> => {
+  console.log('onRpcRequest: ', request);
   try {
     let state = await getSnapStateUnchecked(snap);
     if (state === null) state = await initSnapState(snap);

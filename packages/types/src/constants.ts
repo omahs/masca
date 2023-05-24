@@ -17,6 +17,7 @@ export const availableMethods = [
   'did:pkh',
   // 'did:ebsi',
   'did:jwk',
+  'did:cheqd',
 ] as const;
 export type AvailableMethods = (typeof availableMethods)[number];
 export const isAvailableMethods = (x: string) =>
@@ -28,6 +29,7 @@ export const didCoinTypeMappping: Record<string, number> = {
   'did:pkh': 60,
   // 'did:ebsi': 60,
   // 'did:key:ebsi': 60,
+  'did:cheqd': 60,
   'did:jwk': 60,
 };
 

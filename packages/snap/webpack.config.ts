@@ -29,6 +29,28 @@ const common: Configuration = {
   module: {
     rules: [
       {
+        test: /@cheqd\/did-provider-cheqd/u,
+        use: [
+          {
+            loader: 'swc-loader',
+            options: {
+              mapSource: true,
+            },
+          },
+        ],
+      },
+      {
+        test: /@cheqd\/sdk/u,
+        use: [
+          {
+            loader: 'swc-loader',
+            options: {
+              mapSource: true,
+            },
+          },
+        ],
+      },
+      {
         test: /@chainsafe\/as-sha256/u,
         use: 'null-loader',
       },
