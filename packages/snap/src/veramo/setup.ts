@@ -7,10 +7,9 @@ import {
   IDataManager,
 } from '@blockchain-lab-um/veramo-datamanager';
 import {
-  CheqdDIDProvider,
+  // CheqdDIDProvider,
   getResolver as cheqdDidResolver,
 } from '@cheqd/did-provider-cheqd';
-// import { CheqdNetwork } from '@cheqd/sdk';
 import { MetaMaskInpageProvider } from '@metamask/providers';
 import { SnapsGlobalObject } from '@metamask/snaps-types';
 import {
@@ -78,11 +77,9 @@ export const getAgent = async (
 ): Promise<Agent> => {
   const state = await getSnapState(snap);
   const account = getCurrentAccount(state);
-
   const didProviders: Record<string, AbstractIdentifierProvider> = {};
   const vcStorePlugins: Record<string, AbstractDataStore> = {};
   const enabledVCStores = getEnabledVCStores(account, state);
-
   const networks = [
     {
       name: 'mainnet',
@@ -122,10 +119,10 @@ export const getAgent = async (
     if (!res) throw new Error('Failed to get keys');
     const privateKey = res.privateKey.split('0x')[1];
     console.log('private key: ', privateKey);
-    didProviders['did:cheqd'] = new CheqdDIDProvider({
-      defaultKms: 'web3',
-      cosmosPayerSeed: privateKey,
-    });
+    // didProviders['did:cheqd'] = new CheqdDIDProvider({
+    //   defaultKms: 'web3',
+    //   cosmosPayerSeed: privateKey,
+    // });
   }
   didProviders['did:key'] = new KeyDIDProvider({ defaultKms: 'web3' });
   didProviders['did:pkh'] = new PkhDIDProvider({ defaultKms: 'web3' });

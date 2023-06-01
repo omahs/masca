@@ -1,0 +1,19 @@
+diff --git a/core.js b/core.js
+index 843ad9eab835860b74a47d03c03f7cc9b8147d2f..49d0ab4037c7fe9ef447bd9e5213bc4ba9d77d8a 100644
+--- a/core.js
++++ b/core.js
+@@ -1,4 +1,4 @@
+-import {Buffer} from 'node:buffer';
++import {Buffer} from 'buffer';
+ import * as Token from 'token-types';
+ import * as strtok3 from 'strtok3/core'; // eslint-disable-line n/file-extension-in-import
+ import {
+@@ -1596,7 +1596,7 @@ class FileTypeParser {
+ }
+ 
+ export async function fileTypeStream(readableStream, {sampleSize = minimumBytes} = {}) {
+-	const {default: stream} = await import('node:stream');
++	const {default: stream} = await import('stream');
+ 
+ 	return new Promise((resolve, reject) => {
+ 		readableStream.on('error', reject);
