@@ -1,6 +1,6 @@
 import { MetaMaskInpageProvider } from '@metamask/providers';
-import { SnapsGlobalObject } from '@metamask/snaps-types';
-import { W3CVerifiableCredential } from '@veramo/core';
+import type { SnapsGlobalObject } from '@metamask/snaps-types';
+import type { W3CVerifiableCredential } from '@veramo/core';
 
 import {
   veramoClearVCs,
@@ -13,7 +13,7 @@ import {
   exampleVCinVP,
   getDefaultSnapState,
 } from '../testUtils/constants';
-import { SnapMock, createMockSnap } from '../testUtils/snap.mock';
+import { createMockSnap, SnapMock } from '../testUtils/snap.mock';
 
 describe('Utils [ceramic]', () => {
   let snapMock: SnapsGlobalObject & SnapMock;

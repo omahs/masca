@@ -1,10 +1,11 @@
-import {
+import type {
   UnsignedCredential,
+  VerifiableCredential,
   W3CVerifiableCredential,
   W3CVerifiablePresentation,
 } from '@veramo/core';
 
-import {
+import type {
   AvailableMethods,
   AvailableVCStores,
   SupportedProofFormats,
@@ -54,7 +55,7 @@ export type SetCurrentAccountRequestParams = {
 };
 
 export type CreateVPRequestParams = {
-  vcs: VCRequest[];
+  vcs: W3CVerifiableCredential[];
   proofFormat?: SupportedProofFormats;
   proofOptions?: ProofOptions;
 };
@@ -127,3 +128,29 @@ export type VerifyDataRequestParams =
       presentation: W3CVerifiablePresentation;
       verbose?: boolean;
     };
+
+/**
+ * HandleOIDCCredentialOfferRequestParams
+ */
+export type HandleOIDCCredentialOfferRequestParams = {
+  credentialOfferURI: string;
+};
+
+/**
+ * HandleOIDCAuthorizationRequestParams
+ */
+export type HandleOIDCAuthorizationRequestParams = {
+  authorizationRequestURI: string;
+};
+
+/**
+ * SendOIDCAuthorizationResponseParams
+ */
+export type SendOIDCAuthorizationResponseParams = {
+  authorizationRequestURI: string;
+  credentials: VerifiableCredential[];
+};
+
+export type SetCeramicSessionRequestParams = {
+  serializedSession: string;
+};

@@ -1,13 +1,13 @@
-/* eslint-disable no-param-reassign */
-
-import { AvailableVCStores } from '@blockchain-lab-um/masca-types';
+import type {
+  AvailableVCStores,
+  MascaState,
+} from '@blockchain-lab-um/masca-types';
 import { BIP44CoinTypeNode } from '@metamask/key-tree';
 import { MetaMaskInpageProvider } from '@metamask/providers';
-import { SnapsGlobalObject } from '@metamask/snaps-types';
-import { Component } from '@metamask/snaps-ui';
-import { publicKeyConvert } from 'secp256k1';
+import type { SnapsGlobalObject } from '@metamask/snaps-types';
+import type { Component } from '@metamask/snaps-ui';
 
-import { ApiParams, MascaState } from '../interfaces';
+import type { ApiParams } from '../interfaces';
 import { snapGetKeysFromAddress } from './keyPair';
 import { updateSnapState } from './stateUtils';
 
@@ -112,30 +112,25 @@ export async function getPublicKey(params: {
     return state.accountState[account].publicKey;
   }
 
-  const res = await snapGetKeysFromAddress(
+  const res = await snapGetKeysFromAddress({
+    snap,
     bip44CoinTypeNode,
-    state,
     account,
-    snap
-  );
+    state,
+  });
 
   if (res === null) throw new Error('Could not get keys from address');
   return res.publicKey;
 }
 
-export function uint8ArrayToHex(arr: Uint8Array) {
-  return Buffer.from(arr).toString('hex');
-}
-
-export function hexToUint8Array(str: string): Uint8Array {
-  return new Uint8Array(Buffer.from(str, 'hex'));
-}
-export function getCompressedPublicKey(publicKey: string): string {
-  return uint8ArrayToHex(
-    publicKeyConvert(hexToUint8Array(publicKey.split('0x')[1]), true)
-  );
-}
-
+/**
+ * Function that returns whether the user has confirmed the snap dialog.
+ *
+ * @param snap - snaps global object.
+ * @param content - content to display in the snap dialog.
+ *
+ * @returns boolean - whether the user has confirmed the snap dialog.
+ */
 export async function snapConfirm(
   snap: SnapsGlobalObject,
   content: Component
@@ -150,25 +145,40 @@ export async function snapConfirm(
   return res as boolean;
 }
 
+/**
+ * Function that returns the available VC stores for the passed account.
+ *
+ * @param account - account to get the available stores for.
+ * @param state - masca state object.
+ * @param vcstores - optional list of vcstores to check if enabled.
+ *
+ * @returns - list of available vcstores.
+ */
 export function getEnabledVCStores(
   account: string,
   state: MascaState,
   vcstores?: AvailableVCStores[]
 ): string[] {
-  if (!vcstores) {
-    vcstores = Object.keys(
+  const stores =
+    vcstores ??
+    (Object.keys(
       state.accountState[account].accountConfig.ssi.vcStore
-    ) as AvailableVCStores[];
-  }
+    ) as AvailableVCStores[]);
 
-  const res = vcstores.filter((vcstore) => {
-    return (
-      state.accountState[account].accountConfig.ssi.vcStore[vcstore] === true
-    );
-  });
-  return res;
+  return stores.filter(
+    (store) => state.accountState[account].accountConfig.ssi.vcStore[store]
+  );
 }
 
+/**
+ * Checks if the passed VC store is enabled for the passed account.
+ *
+ * @param account - account to check.
+ * @param state - masca state object.
+ * @param store - vc store to check.
+ *
+ * @returns boolean - whether the vc store is enabled.
+ */
 export function isEnabledVCStore(
   account: string,
   state: MascaState,
@@ -177,6 +187,18 @@ export function isEnabledVCStore(
   return state.accountState[account].accountConfig.ssi.vcStore[store];
 }
 
+/**
+ * Sets the passed public key to the passed account.
+ *
+ * @param state - masca state object.
+ * @param snap - snaps global object.
+ * @param ethereum - metamask inpage provider.
+ * @param account - account to set the public key for.
+ * @param bip44CoinTypeNode - optional bip44 coin type node.
+ * @param origin - origin of the request.
+ *
+ * @returns void
+ */
 export async function setAccountPublicKey(params: ApiParams): Promise<void> {
   const { state, snap, account, bip44CoinTypeNode } = params;
   const publicKey = await getPublicKey({

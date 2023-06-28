@@ -1,6 +1,6 @@
 import { BIP44CoinTypeNode } from '@metamask/key-tree';
 import { MetaMaskInpageProvider } from '@metamask/providers';
-import { SnapsGlobalObject } from '@metamask/snaps-types';
+import type { SnapsGlobalObject } from '@metamask/snaps-types';
 
 import {
   getEmptyAccountState,
@@ -15,12 +15,12 @@ import {
   updateSnapState,
 } from '../../src/utils/stateUtils';
 import {
-  address,
+  account,
   bip44Entropy,
   getDefaultSnapState,
   publicKey,
 } from '../testUtils/constants';
-import { SnapMock, createMockSnap } from '../testUtils/snap.mock';
+import { createMockSnap, SnapMock } from '../testUtils/snap.mock';
 
 describe('Utils [state]', () => {
   let snapMock: SnapsGlobalObject & SnapMock;
@@ -55,7 +55,6 @@ describe('Utils [state]', () => {
       const emptyState = {};
 
       await expect(
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         updateSnapState(snapMock, emptyState as any)
       ).resolves.not.toThrow();
 
@@ -131,14 +130,14 @@ describe('Utils [state]', () => {
     it('should succeed initializing empty account state', async () => {
       const initialState = getInitialSnapState();
       const defaultState = getDefaultSnapState();
-      defaultState.accountState[address].publicKey = '';
+      defaultState.accountState[account].publicKey = '';
 
       await expect(
         initAccountState({
           snap: snapMock,
           ethereum: ethereumMock,
           state: initialState,
-          account: address,
+          account,
           bip44CoinTypeNode: bip44Entropy as BIP44CoinTypeNode,
           origin: 'localhost',
         })
@@ -156,16 +155,15 @@ describe('Utils [state]', () => {
   describe('setPublicKey', () => {
     it('should succeed setting public key', async () => {
       const initialState = getInitialSnapState();
-      initialState.accountState[address] = getEmptyAccountState();
+      initialState.accountState[account] = getEmptyAccountState();
       const defaultState = getDefaultSnapState();
-      defaultState.accountState[address].publicKey = publicKey;
-
+      defaultState.accountState[account].publicKey = publicKey;
       await expect(
         setAccountPublicKey({
           snap: snapMock,
           ethereum: ethereumMock,
           state: initialState,
-          account: address,
+          account,
           bip44CoinTypeNode: bip44Entropy as BIP44CoinTypeNode,
           origin: 'localhost',
         })

@@ -1,4 +1,5 @@
 const StylelintPlugin = require('stylelint-webpack-plugin');
+const path = require('path');
 
 // Content-Security-Policy
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
@@ -6,10 +7,11 @@ const contentSecurityPolicy = `
   default-src 'self';
   script-src 'self' 'unsafe-inline' cdn.vercel-insights.com vercel.live;
   child-src 'none';
-  img-src 'self' data:;
+  img-src 'self' assets.vercel.com data:;
   style-src 'self' 'unsafe-inline';
   font-src 'self';
   connect-src *;
+  frame-src vercel.live;
 `;
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -21,20 +23,23 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   // https://nextjs.org/docs/advanced-features/output-file-tracing#automatically-copying-traced-files
-  output: 'standalone',
+  // output: 'standalone',
   // https://nextjs.org/docs/messages/next-image-unconfigured-host
   images: {
     domains: ['localhost'],
     loader: 'default',
   },
+  optimizeFonts: true,
   experimental: {
-    fontLoaders: [
-      { loader: '@next/font/google', options: { subsets: ['latin'] } },
-    ],
-  },
-  i18n: {
-    locales: ['en', 'si'],
-    defaultLocale: 'en',
+    appDir: true,
+    outputFileTracingRoot: path.join(__dirname, '../../'),
+    outputFileTracingExcludes: {
+      '*': [
+        'node_modules/@swc/core-linux-x64-gnu',
+        'node_modules/@swc/core-linux-x64-musl',
+        'node_modules/@esbuild/linux-x64',
+      ],
+    },
   },
   env: {
     USE_LOCAL: process.env.USE_LOCAL || 'false',

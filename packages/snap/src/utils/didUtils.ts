@@ -1,21 +1,21 @@
-import {
+import type {
   AvailableMethods,
   AvailableVCStores,
+  MascaState,
 } from '@blockchain-lab-um/masca-types';
 import { BIP44CoinTypeNode } from '@metamask/key-tree';
 import { MetaMaskInpageProvider } from '@metamask/providers';
-import { SnapsGlobalObject } from '@metamask/snaps-types';
-import { IIdentifier } from '@veramo/core';
-import { DIDResolutionResult } from 'did-resolver';
+import type { SnapsGlobalObject } from '@metamask/snaps-types';
+import type { IIdentifier } from '@veramo/core';
+import type { DIDResolutionResult } from 'did-resolver';
+import elliptic from 'elliptic';
 
-import { getDidCheqdIdentifier } from '../did/cheqd/cheqdDidUtils';
-import { getDidJwkIdentifier } from '../did/jwk/jwkDidUtils';
-import { getDidKeyIdentifier } from '../did/key/keyDidUtils';
-import { MascaState } from '../interfaces';
 import { getAgent } from '../veramo/setup';
 import { snapGetKeysFromAddress } from './keyPair';
 import { getCurrentNetwork } from './snapUtils';
 import { updateSnapState } from './stateUtils';
+
+const { ec: EC } = elliptic;
 
 export async function changeCurrentVCStore(params: {
   snap: SnapsGlobalObject;
@@ -39,69 +39,48 @@ export async function getCurrentDid(params: {
   const { ethereum, snap, state, account, bip44CoinTypeNode } = params;
 
   const method = state.accountState[account].accountConfig.ssi.didMethod;
+  switch (method) {
+    case 'did:ethr': {
+      const CHAIN_ID = await getCurrentNetwork(ethereum);
+      const ctx = new EC('secp256k1');
+      const ecPublicKey = ctx.keyFromPublic(
+        state.accountState[account].publicKey.slice(2),
+        'hex'
+      );
+      const compactPublicKey = `0x${ecPublicKey.getPublic(true, 'hex')}`;
 
-  // TODO: Use switch statement
-  if (method === 'did:ethr') {
-    const CHAIN_ID = await getCurrentNetwork(ethereum);
-    return `did:ethr:${CHAIN_ID}:${account}`;
-  }
-  if (method === 'did:key') {
-    const didUrl = getDidKeyIdentifier(state, account);
-    return `did:key:${didUrl}`;
-  }
-  if (method === 'did:cheqd') {
-    const didUrl = await getDidCheqdIdentifier({ snap, ethereum });
-    return `did:cheqd:${didUrl}`;
-  }
-  // if (method === 'did:key:ebsi') {
-  //   const didUrl = getDidEbsiKeyIdentifier(state, account);
-  //   return `did:key:${didUrl}`;
-  // }
-  // if (method === 'did:ebsi') {
-  //   // TODO: handle ebsi bearer token workflow
-  //   const bearer = '';
-  //   const didUrl = await getDidEbsiIdentifier({
-  //     state,
-  //     snap,
-  //     account,
-  //     args: {
-  //       provider: method,
-  //       kms: 'web3',
-  //       options: { bearer },
-  //     },
-  //   });
-  //   return `did:ebsi:${didUrl}`;
-  // }
-  if (method === 'did:jwk') {
-    const didUrl = await getDidJwkIdentifier(state, account);
-    return `did:jwk:${didUrl}`;
-  }
-  // TODO: handle did:jwk when veramo supports it
-  if (method === 'did:pkh') {
-    const agent = await getAgent(snap, ethereum);
+      return `did:ethr:${CHAIN_ID}:${compactPublicKey}`;
+    }
+    case 'did:key:ebsi':
+    case 'did:key':
+    case 'did:pkh':
+    case 'did:jwk': {
+      const agent = await getAgent(snap, ethereum);
+      const res = await snapGetKeysFromAddress({
+        bip44CoinTypeNode,
+        account,
+        snap,
+        state,
+      });
 
-    const res = await snapGetKeysFromAddress(
-      bip44CoinTypeNode,
-      state,
-      account,
-      snap
-    );
+      if (!res) throw new Error('Failed to get keys');
 
-    if (!res) throw new Error('Failed to get keys');
+      const identifier: IIdentifier = await agent.didManagerCreate({
+        provider: method === 'did:key:ebsi' ? 'did:key' : method,
+        kms: 'snap',
+        options: {
+          privateKeyHex: res.privateKey.slice(2),
+          keyType: 'Secp256k1',
+          ...(method === 'did:key:ebsi' && { type: 'ebsi' }),
+        },
+      });
 
-    const identifier: IIdentifier = await agent.didManagerCreate({
-      provider: method,
-      kms: 'snap',
-      options: {
-        privateKeyHex: res.privateKey.split('0x')[1],
-        keyType: 'Secp256k1',
-      },
-    });
-
-    if (!identifier?.did) throw new Error('Failed to create identifier');
-    return identifier.did;
+      if (!identifier?.did) throw new Error('Failed to create identifier');
+      return identifier.did;
+    }
+    default:
+      throw new Error('Unsupported DID method');
   }
-  return ''; // TODO: Throw error
 }
 
 export async function changeCurrentMethod(params: {
@@ -132,14 +111,7 @@ export async function resolveDid(params: {
   ethereum: MetaMaskInpageProvider;
 }): Promise<DIDResolutionResult> {
   const { did, snap, ethereum } = params;
-  if (did.startsWith('did:key:zBhB') || did.startsWith('did:key:z2dm')) {
-    const agent = await getAgent(snap, ethereum);
-    const didResolution = await agent.resolveDid({ didUrl: did });
-    return didResolution;
-  }
-  const response = await fetch(
-    `https://dev.uniresolver.io/1.0/identifiers/${did}`
-  );
-  const data = (await response.json()) as DIDResolutionResult;
-  return data;
+  const agent = await getAgent(snap, ethereum);
+  const didResolution = await agent.resolveDid({ didUrl: did });
+  return didResolution;
 }

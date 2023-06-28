@@ -1,11 +1,16 @@
+import type { MascaState } from '@blockchain-lab-um/masca-types';
 import { BIP44CoinTypeNode } from '@metamask/key-tree';
-import { RequestArguments } from '@metamask/providers/dist/BaseProvider';
-import { Maybe } from '@metamask/providers/dist/utils';
-import { SnapsGlobalObject } from '@metamask/snaps-types';
-import { Wallet, providers } from 'ethers';
+import type { RequestArguments } from '@metamask/providers/dist/BaseProvider';
+import type { Maybe } from '@metamask/providers/dist/utils';
+import type { SnapsGlobalObject } from '@metamask/snaps-types';
+import {
+  AlchemyProvider,
+  Wallet,
+  type Filter,
+  type TransactionRequest,
+} from 'ethers';
 
-import { MascaState } from '../../src/interfaces';
-import { address, mnemonic, privateKey } from './constants';
+import { account, mnemonic, privateKey } from './constants';
 
 interface ISnapMock {
   request<T>(args: RequestArguments): Promise<Maybe<T>>;
@@ -15,7 +20,6 @@ interface SnapManageState {
   operation: 'get' | 'update' | 'clear';
   newState: unknown;
 }
-
 export class SnapMock implements ISnapMock {
   private snapState: MascaState | null = null;
 
@@ -37,6 +41,17 @@ export class SnapMock implements ISnapMock {
     return null;
   }
 
+  private snapGetEntropy(params: { version: string; salt: string }): string {
+    switch (params.salt.toLowerCase()) {
+      case '0xb6665128ee91d84590f70c3268765384a9cafbcd':
+        return '0x77160f04a3daf2ba6b21991da8c82a075ebbb677863e6e21bc1b2c96848c9649';
+      case '0x461e557a07ac110bc947f18b3828e26f013dac39':
+        return '0x7ca467fedb2f46903cc9e09273957ec6911ebfc602ed57c94701b6b0e504080a';
+      default:
+        return '0x0000000000000000000000000000000000000000000000000000000000000000';
+    }
+  }
+
   private async snapPersonalSign(data: string[]): Promise<string> {
     const signature = await this.snap.signMessage(data[0]);
     return signature;
@@ -44,21 +59,22 @@ export class SnapMock implements ISnapMock {
 
   private async snapEthCall(data: any[]): Promise<string> {
     const apiKey = 'NRFBwig_CLVL0WnQLY3dUo8YkPmW-7iN';
-    const provider = new providers.AlchemyProvider('goerli', apiKey);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    return provider.call(data[0], data[1]);
+    const provider = new AlchemyProvider('goerli', apiKey);
+    return provider.call({
+      ...data[0],
+      blockTag: data[1],
+    } as TransactionRequest);
   }
 
   private async snapEthLogs(data: any[]): Promise<unknown> {
     const apiKey = 'NRFBwig_CLVL0WnQLY3dUo8YkPmW-7iN';
-    const provider = new providers.AlchemyProvider('goerli', apiKey);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    return provider.getLogs(data[0]);
+    const provider = new AlchemyProvider('goerli', apiKey);
+    return provider.getLogs(data[0] as Filter);
   }
 
   readonly rpcMocks = {
     snap_dialog: jest.fn().mockReturnValue(true),
-    eth_requestAccounts: jest.fn().mockResolvedValue([address]),
+    eth_requestAccounts: jest.fn().mockResolvedValue([account]),
     eth_chainId: jest.fn().mockResolvedValue('0x5'),
     net_version: jest.fn().mockResolvedValue('5'),
     snap_getBip44Entropy: jest
@@ -72,31 +88,39 @@ export class SnapMock implements ISnapMock {
 
         return node.toJSON();
       }),
+    snap_getEntropy: jest
+      .fn()
+      .mockImplementation((params: { version: string; salt: string }) =>
+        this.snapGetEntropy(params)
+      ),
     snap_manageState: jest
       .fn()
       .mockImplementation((params: unknown) =>
         this.snapManageState(params as SnapManageState)
       ),
-    personal_sign: jest.fn().mockImplementation(async (data: unknown) => {
-      return this.snapPersonalSign(data as string[]);
-    }),
-    eth_call: jest.fn().mockImplementation(async (data: unknown) => {
-      return this.snapEthCall(data as any[]);
-    }),
-    eth_getLogs: jest.fn().mockImplementation(async (data: unknown) => {
-      return this.snapEthLogs(data as any[]);
-    }),
+    personal_sign: jest
+      .fn()
+      .mockImplementation(async (data: unknown) =>
+        this.snapPersonalSign(data as string[])
+      ),
+    eth_call: jest
+      .fn()
+      .mockImplementation(async (data: unknown) =>
+        this.snapEthCall(data as any[])
+      ),
+    eth_getLogs: jest
+      .fn()
+      .mockImplementation(async (data: unknown) =>
+        this.snapEthLogs(data as any[])
+      ),
     eth_signTypedData_v4: jest
       .fn()
       .mockImplementation((...params: unknown[]) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unused-vars, @typescript-eslint/no-unsafe-argument
-        const { domain, types, message } = JSON.parse(params[1] as any);
+        const { domain, types, message } = JSON.parse(params[1] as string);
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         delete types.EIP712Domain;
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        return this.snap._signTypedData(domain, types, message);
+        return this.snap.signTypedData(domain, types, message);
       }),
   };
 

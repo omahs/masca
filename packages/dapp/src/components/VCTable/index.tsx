@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { QueryVCsRequestResult } from '@blockchain-lab-um/masca-types';
 import { isError } from '@blockchain-lab-um/utils';
 import {
@@ -16,7 +18,6 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import {
-  SortingState,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
@@ -26,8 +27,11 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  SortingState,
   useReactTable,
 } from '@tanstack/react-table';
+import clsx from 'clsx';
+import { DateTime } from 'luxon';
 import { useTranslations } from 'next-intl';
 import { shallow } from 'zustand/shallow';
 
@@ -39,19 +43,24 @@ import Tooltip from '@/components/Tooltip';
 import { convertTypes } from '@/utils/string';
 import { useMascaStore, useTableStore, useToastStore } from '@/stores';
 import TablePagination from './TablePagination';
-import VCCard from './VCCard';
 import { includesDataStore, selectRows } from './tableUtils';
+import VCCard from './VCCard';
 
 const Table = () => {
   const router = useRouter();
   const t = useTranslations('Dashboard');
   const [loading, setLoading] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
-  const { api, vcs, changeVcs } = useMascaStore(
+  const [elapsedTimeSinceLastFetch, setElapsedTimeSinceLastFetch] = useState<
+    string | null
+  >(null);
+
+  const { api, vcs, changeVcs, changeLastFetch } = useMascaStore(
     (state) => ({
       api: state.mascaApi,
       vcs: state.vcs,
       changeVcs: state.changeVcs,
+      changeLastFetch: state.changeLastFetch,
     }),
     shallow
   );
@@ -66,16 +75,6 @@ const Table = () => {
       }),
       shallow
     );
-  const { setTitle, setToastLoading, setToastOpen, setType } = useToastStore(
-    (state) => ({
-      setTitle: state.setTitle,
-      setText: state.setText,
-      setToastLoading: state.setLoading,
-      setToastOpen: state.setOpen,
-      setType: state.setType,
-    }),
-    shallow
-  );
 
   const columnHelper = createColumnHelper<QueryVCsRequestResult>();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -89,11 +88,9 @@ const Table = () => {
       },
       {
         id: 'type',
-        cell: (info) => {
-          return (
-            <span className="font-bold">{info.getValue().toString()}</span>
-          );
-        },
+        cell: (info) => (
+          <span className="font-bold">{info.getValue().toString()}</span>
+        ),
         header: () => <span className="">{t('table.type')}</span>,
       }
     ),
@@ -151,23 +148,18 @@ const Table = () => {
         header: () => <span>{t('table.issuer')}</span>,
       }
     ),
-    columnHelper.accessor(
-      (row) => {
-        return row.data.expirationDate;
-      },
-      {
-        id: 'exp_date',
-        cell: (info) => (
-          <span className="flex items-center justify-center">
-            {info.getValue() === undefined
-              ? '/'
-              : new Date(info.getValue() as string).toDateString()}
-          </span>
-        ),
-        header: () => <span>{t('table.expiration-date')}</span>,
-        enableGlobalFilter: false,
-      }
-    ),
+    columnHelper.accessor((row) => row.data.expirationDate, {
+      id: 'exp_date',
+      cell: (info) => (
+        <span className="flex items-center justify-center">
+          {info.getValue() === undefined
+            ? '/'
+            : new Date(info.getValue() as string).toDateString()}
+        </span>
+      ),
+      header: () => <span>{t('table.expiration-date')}</span>,
+      enableGlobalFilter: false,
+    }),
     columnHelper.accessor(
       (row) => {
         if (row.data.expirationDate)
@@ -254,7 +246,7 @@ const Table = () => {
       id: 'actions',
       cell: ({ row }) => (
         <div className="flex items-center justify-center gap-1">
-          <button>
+          <button className="dark:text-navy-blue-500 cursor-default text-gray-500">
             <ShareIcon className="h-6 w-6" />
           </button>
           <button
@@ -297,29 +289,43 @@ const Table = () => {
   const loadVCs = async () => {
     if (!api) return;
     const loadedVCs = await api.queryVCs();
+
     if (isError(loadedVCs)) {
-      setToastOpen(false);
       setTimeout(() => {
-        setTitle('Failed to load credential');
-        setType('error');
-        setToastLoading(false);
-        setToastOpen(true);
-      }, 100);
-      console.log('Failed to load VCs');
+        useToastStore.setState({
+          open: true,
+          title: 'Failed to load credentials',
+          type: 'error',
+          loading: false,
+        });
+      }, 200);
       return;
     }
+
+    changeLastFetch(Date.now());
+
     if (loadedVCs.data) {
       changeVcs(loadedVCs.data);
-
       if (loadedVCs.data.length === 0) {
-        setToastOpen(false);
         setTimeout(() => {
-          setTitle('No credentials found');
-          setType('error');
-          setLoading(false);
-          setToastOpen(true);
-        }, 100);
+          useToastStore.setState({
+            open: true,
+            title: 'No credentials found',
+            type: 'info',
+            loading: false,
+          });
+        }, 200);
+        return;
       }
+
+      setTimeout(() => {
+        useToastStore.setState({
+          open: true,
+          title: 'Credentials loaded',
+          type: 'success',
+          loading: false,
+        });
+      }, 200);
     }
   };
 
@@ -330,7 +336,17 @@ const Table = () => {
   };
 
   useEffect(() => {
+    const interval = setInterval(() => {
+      const { lastFetch } = useMascaStore.getState();
+      if (lastFetch) {
+        setElapsedTimeSinceLastFetch(
+          DateTime.fromMillis(lastFetch).toRelative()
+        );
+      }
+    }, 1000);
+
     selectRows(table, selectedVCs);
+    return () => clearInterval(interval);
   }, []);
 
   if (vcs.length === 0)
@@ -342,15 +358,17 @@ const Table = () => {
           onClick={handleLoadVcs}
           loading={loading}
         >
-          {t('noVCs.load')}
+          {t('no-credentials.load')}
         </Button>
-        <span className="py-4 text-lg font-semibold">{t('noVCs.or')}</span>
+        <span className="py-4 text-lg font-semibold">
+          {t('no-credentials.or')}
+        </span>
         <Link
           href="https://blockchain-lab-um.github.io/course-dapp"
           target="_blank"
         >
           <Button variant="secondary" size="sm" onClick={() => {}}>
-            {t('noVCs.get')}
+            {t('no-credentials.get')}
           </Button>
         </Link>
       </div>
@@ -369,7 +387,7 @@ const Table = () => {
                 {vcs.length} {t('table-header.found')}
               </div>
               <div className="text-h5 dark:text-navy-blue-400 text-gray-600">
-                {t('table-header.fetched')}: today
+                {t('table-header.fetched')}: {elapsedTimeSinceLastFetch ?? '-'}
               </div>
             </div>
           </div>
@@ -433,34 +451,27 @@ const Table = () => {
                           cell.column.id !== 'issuer' &&
                           cell.column.id !== 'actions'
                         ) {
-                          router
-                            .push(
-                              {
-                                pathname: '/vc',
-                                query: { id: row.original.metadata.id },
-                              },
-                              undefined,
-                              { shallow: true }
-                            )
-                            .then(() => {})
-                            .catch(() => {});
+                          router.push(
+                            `/app/verifiable-credential/${row.original.metadata.id}`
+                          );
                         }
                       }}
-                      className={`max-h-16 py-5  ${
+                      className={clsx(
+                        'max-h-16 py-5',
                         cell.column.id === 'exp_date' ||
-                        cell.column.id === 'date'
+                          cell.column.id === 'date'
                           ? 'hidden lg:table-cell'
+                          : '',
+                        cell.column.id === 'type'
+                          ? 'w-[20%] max-w-[20%] px-2'
+                          : '',
+                        cell.column.id === 'actions'
+                          ? 'hidden sm:table-cell'
+                          : '',
+                        cell.column.id === 'subject'
+                          ? 'hidden xl:table-cell'
                           : ''
-                      }
-                        ${
-                          cell.column.id === 'type'
-                            ? ' w-[20%] max-w-[20%] px-2'
-                            : ''
-                        }
-                  ${cell.column.id === 'actions' ? 'hidden sm:table-cell' : ''}
-                  ${
-                    cell.column.id === 'subject' ? 'hidden xl:table-cell' : ''
-                  }`}
+                      )}
                       key={cell.id}
                     >
                       {flexRender(
@@ -473,12 +484,12 @@ const Table = () => {
               ))}
             </tbody>
           </table>
-          <div className=" mt-auto flex justify-center rounded-b-3xl pb-3 pt-3">
+          <div className="mt-auto flex justify-center rounded-b-3xl pb-3 pt-3">
             <TablePagination table={table} />
           </div>
           {table.getSelectedRowModel().rows.length > 0 && (
-            <div className="mb-2 max-lg:flex max-lg:justify-center lg:absolute lg:-bottom-5 lg:right-10">
-              <Link href="createVP">
+            <div className="absolute -bottom-3 right-10 md:-bottom-4 lg:-bottom-5">
+              <Link href="/app/create-verifiable-presentation">
                 <Button
                   variant="primary"
                   size="wd"
@@ -488,7 +499,7 @@ const Table = () => {
                     );
                   }}
                 >
-                  {t('createVP')}{' '}
+                  {t('create-verifiable-presentation')}{' '}
                   {table.getSelectedRowModel().rows.length > 0 &&
                     `(${table.getSelectedRowModel().rows.length})`}
                 </Button>
@@ -504,51 +515,50 @@ const Table = () => {
       </>
     );
   }
+
   return (
-    <>
-      <div className="relative flex h-full min-h-[50vh] w-full flex-col">
-        <div className="dark:border-navy-blue-600 flex items-center justify-between border-b border-gray-400 p-5">
-          <div className="text-h2 font-ubuntu dark:text-navy-blue-50 pl-4 font-medium text-gray-900">
-            {t('table-header.credentials')}
+    <div className="relative flex h-full min-h-[50vh] w-full flex-col">
+      <div className="dark:border-navy-blue-600 flex items-center justify-between border-b border-gray-400 p-5">
+        <div className="text-h2 font-ubuntu dark:text-navy-blue-50 pl-4 font-medium text-gray-900">
+          {t('table-header.credentials')}
+        </div>
+        <div className="text-right">
+          <div className="text-h4 dark:text-navy-blue-50 text-gray-900">
+            {vcs.length} {t('table-header.found')}
           </div>
-          <div className="text-right">
-            <div className="text-h4 dark:text-navy-blue-50 text-gray-900">
-              {vcs.length} {t('table-header.found')}
-            </div>
-            <div className="text-h5 dark:text-navy-blue-400 text-gray-600">
-              {t('table-header.fetched')}: today
-            </div>
+          <div className="text-h5 dark:text-navy-blue-400 text-gray-600">
+            {t('table-header.fetched')}: {elapsedTimeSinceLastFetch ?? '-'}
           </div>
         </div>
-        <div className="flex flex-wrap justify-center">
-          {table.getRowModel().rows.map((row, key) => (
-            <VCCard key={key} row={row} />
-          ))}
-        </div>
-        <div className="mt-auto flex justify-center rounded-b-3xl pb-3 pt-3">
-          <TablePagination table={table} />
-        </div>
-        {table.getSelectedRowModel().rows.length > 0 && (
-          <div className="absolute -bottom-5 right-10">
-            <Link href="createVP">
-              <Button
-                variant="primary"
-                size="wd"
-                onClick={() => {
-                  setSelectedVCs(
-                    table.getSelectedRowModel().rows.map((r) => r.original)
-                  );
-                }}
-              >
-                {t('createVP')}{' '}
-                {table.getSelectedRowModel().rows.length > 0 &&
-                  `(${table.getSelectedRowModel().rows.length})`}
-              </Button>
-            </Link>
-          </div>
-        )}
       </div>
-    </>
+      <div className="flex flex-wrap justify-center">
+        {table.getRowModel().rows.map((row, key) => (
+          <VCCard key={key} row={row} />
+        ))}
+      </div>
+      <div className="mt-auto flex justify-center rounded-b-3xl pb-3 pt-3">
+        <TablePagination table={table} />
+      </div>
+      {table.getSelectedRowModel().rows.length > 0 && (
+        <div className="absolute -bottom-3 right-10 md:-bottom-4 lg:-bottom-5">
+          <Link href="/app/create-verifiable-presentation">
+            <Button
+              variant="primary"
+              size="wd"
+              onClick={() => {
+                setSelectedVCs(
+                  table.getSelectedRowModel().rows.map((r) => r.original)
+                );
+              }}
+            >
+              {t('create-verifiable-presentation')}{' '}
+              {table.getSelectedRowModel().rows.length > 0 &&
+                `(${table.getSelectedRowModel().rows.length})`}
+            </Button>
+          </Link>
+        </div>
+      )}
+    </div>
   );
 };
 

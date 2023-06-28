@@ -1,20 +1,20 @@
 import {
-  AvailableVCStores,
-  CreateVCRequestParams,
-  CreateVPRequestParams,
-  DeleteVCsRequestParams,
-  QueryVCsRequestParams,
-  ResolveDIDRequestParams,
-  SaveVCRequestParams,
-  SetCurrentAccountRequestParams,
-  SetVCStoreRequestParams,
-  SwitchMethodRequestParams,
-  VerifyDataRequestParams,
   isAvailableMethods,
   isAvailableVCStores,
   isSupportedProofFormat,
+  type AvailableVCStores,
+  type CreateVCRequestParams,
+  type CreateVPRequestParams,
+  type DeleteVCsRequestParams,
+  type MascaState,
+  type QueryVCsRequestParams,
+  type ResolveDIDRequestParams,
+  type SaveVCRequestParams,
+  type SetCurrentAccountRequestParams,
+  type SetVCStoreRequestParams,
+  type SwitchMethodRequestParams,
+  type VerifyDataRequestParams,
 } from '@blockchain-lab-um/masca-types';
-import { MascaState } from 'src/interfaces';
 
 import { isEnabledVCStore } from './snapUtils';
 
@@ -125,39 +125,6 @@ export function isValidCreateVPRequest(
     ) {
       throw new Error('Type is not a string');
     }
-
-    // Check if vcs is valid
-    param.vcs.forEach((vc) => {
-      if (
-        vc !== null &&
-        typeof vc === 'object' &&
-        'id' in vc &&
-        typeof vc.id === 'string'
-      ) {
-        if (
-          'metadata' in vc &&
-          vc.metadata !== null &&
-          typeof vc.metadata === 'object' &&
-          'store' in vc.metadata &&
-          vc.metadata.store !== null &&
-          typeof vc.metadata.store === 'string' &&
-          !isAvailableVCStores(vc.metadata.store)
-        ) {
-          throw new Error(`Store ${vc.metadata.store} is not supported!`);
-        }
-        if (
-          'metadata' in vc &&
-          vc.metadata !== null &&
-          typeof vc.metadata === 'object' &&
-          'store' in vc.metadata &&
-          vc.metadata.store !== null &&
-          typeof vc.metadata.store === 'string' &&
-          !isEnabledVCStore(account, state, vc.metadata?.store)
-        ) {
-          throw new Error(`Store ${vc.metadata.store} is not enabled!`);
-        }
-      } else throw new Error('VC is invalid format');
-    });
     return;
   }
 

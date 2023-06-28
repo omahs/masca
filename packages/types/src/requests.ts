@@ -1,4 +1,4 @@
-import {
+import type {
   CreateVC,
   CreateVP,
   DeleteVC,
@@ -9,13 +9,19 @@ import {
   GetMethod,
   GetSnapSettings,
   GetVCStore,
+  HandleOIDCAuthorizationRequest,
+  HandleOIDCCredentialOffer,
   QueryVCs,
   ResolveDID,
   SaveVC,
+  SendOIDCAuthorizationResponse,
+  SetCeramicSession,
   SetCurrentAccount,
   SetVCStore,
   SwitchMethod,
   TogglePopups,
+  ValidateStoredCeramicSession,
+  VerifyData,
 } from './methods.js';
 
 export type MascaRPCRequest =
@@ -35,7 +41,13 @@ export type MascaRPCRequest =
   | GetSnapSettings
   | ResolveDID
   | CreateVC
-  | SetCurrentAccount;
+  | SetCurrentAccount
+  | VerifyData
+  | HandleOIDCCredentialOffer
+  | HandleOIDCAuthorizationRequest
+  | SendOIDCAuthorizationResponse
+  | SetCeramicSession
+  | ValidateStoredCeramicSession;
 
 export type Method = MascaRPCRequest['method'];
 

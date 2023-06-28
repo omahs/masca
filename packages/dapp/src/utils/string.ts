@@ -1,11 +1,11 @@
 const convertWords = (types: string[]): string[] => {
-  const formattedTypes = types.map((type) => {
-    return type
+  const formattedTypes = types.map((type) =>
+    type
       .replace(/([A-Z]+)/g, ' $1')
       .replace(/([A-Z][a-z])/g, ' $1')
       .replace(/\s+/g, ' ')
-      .trim();
-  });
+      .trim()
+  );
   return formattedTypes;
 };
 
@@ -18,7 +18,6 @@ export const convertTypes = (types: string | string[] | undefined): string => {
       result = convertWords(types).reverse().join(', ');
     }
   }
-
   return result;
 };
 

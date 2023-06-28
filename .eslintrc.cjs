@@ -5,7 +5,7 @@ module.exports = {
     'airbnb-typescript/base',
     'plugin:@typescript-eslint/recommended',
     'plugin:@typescript-eslint/recommended-requiring-type-checking',
-    'plugin:prettier/recommended',
+    'prettier',
   ],
   overrides: [
     {
@@ -21,9 +21,6 @@ module.exports = {
       extends: ['plugin:jest/recommended', 'plugin:jest/style'],
       rules: {
         'jest/prefer-expect-assertions': 'off',
-        '@typescript-eslint/no-unsafe-assignment': 'off',
-        '@typescript-eslint/no-explicit-any': 'off',
-        '@typescript-eslint/no-unsafe-member-access': 'off',
       },
       env: { jest: true },
     },
@@ -43,8 +40,15 @@ module.exports = {
       'LabeledStatement',
       'WithStatement',
     ],
+    'no-param-reassign': [2, { props: false }],
+    'no-await-in-loop': 'off',
+    'no-nested-ternary': 'off',
+    '@typescript-eslint/no-unsafe-assignment': 'off',
+    '@typescript-eslint/no-explicit-any': 'off',
+    '@typescript-eslint/no-unsafe-member-access': 'off',
+    '@typescript-eslint/no-unsafe-argument': 'off',
+    '@typescript-eslint/require-await': 'off',
     // for unused-imports library
-
     '@typescript-eslint/no-unused-vars': 'off',
     'unused-imports/no-unused-imports': 'error',
     'unused-imports/no-unused-vars': [
@@ -64,16 +68,32 @@ module.exports = {
           '**/*.spec.ts',
           '**/*.e2e-spec.ts',
           '**/webpack.config.ts',
+          '**/test/**/*.ts',
+          '**/tests/**/*.ts',
           '**/tsup.config.ts',
           '**/jest.d.ts',
+          '**/test/**',
+          '**/tests/**',
         ],
       },
     ],
-
-    // for prettier
-    'prettier/prettier': ['error', { singleQuote: true }],
     'import/extensions': 'off',
   },
+  overrides: [
+    {
+      // Disable in test files
+      files: [
+        '**/*.spec.ts',
+        '**/*.e2e-spec.ts',
+        '**/test/**/*.ts',
+        '**/tests/**/*.ts',
+      ],
+      rules: {
+        '@typescript-eslint/no-unsafe-member-access': 'off',
+        '@typescript-eslint/no-unsafe-assignment': 'off',
+      },
+    },
+  ],
   ignorePatterns: [
     '**/node_modules/**',
     '**/dist/**',
@@ -85,5 +105,6 @@ module.exports = {
     '**/out',
     '**/.next',
     'tsup.config.ts',
+    'templates',
   ],
 };

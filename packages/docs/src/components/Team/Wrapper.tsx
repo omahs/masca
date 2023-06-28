@@ -1,9 +1,8 @@
-/* eslint-disable import/extensions */
 import React from 'react';
 
 import members from '../../constants/Members';
-import TeamCard from './TeamCard';
 import styles from './styles.module.css';
+import TeamCard from './TeamCard';
 
 export default function Wrapper() {
   return (

@@ -1,32 +1,37 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/dot-notation */
-
+import {
+  MascaKeyDidProvider,
+  getMascaDidKeyResolver as mascaKeyDidResolver,
+} from '@blockchain-lab-um/did-provider-key';
+import {
+  IOIDCClientPlugin,
+  OIDCClientPlugin,
+} from '@blockchain-lab-um/oidc-client-plugin';
 import {
   AbstractDataStore,
   DataManager,
-  IDataManager,
+  type IDataManager,
 } from '@blockchain-lab-um/veramo-datamanager';
 import {
   // CheqdDIDProvider,
   getResolver as cheqdDidResolver,
 } from '@cheqd/did-provider-cheqd';
+import { Web3Provider } from '@ethersproject/providers';
 import { MetaMaskInpageProvider } from '@metamask/providers';
-import { SnapsGlobalObject } from '@metamask/snaps-types';
+import type { SnapsGlobalObject } from '@metamask/snaps-types';
 import {
-  IDIDManager,
-  IDataStore,
-  IKeyManager,
-  IResolver,
-  TAgent,
   createAgent,
+  type ICredentialVerifier,
+  type IDataStore,
+  type IDIDManager,
+  type IKeyManager,
+  type IResolver,
+  type TAgent,
 } from '@veramo/core';
 import { CredentialIssuerEIP712 } from '@veramo/credential-eip712';
-// import {
-//   CredentialIssuerLD,
-//   LdDefaultContexts,
-//   VeramoEcdsaSecp256k1RecoverySignature2020,
-// } from '@veramo/credential-ld';
-import { CredentialPlugin, ICredentialIssuer } from '@veramo/credential-w3c';
+import {
+  CredentialPlugin,
+  type ICredentialIssuer,
+} from '@veramo/credential-w3c';
 import { AbstractIdentifierProvider, DIDManager } from '@veramo/did-manager';
 import { EthrDIDProvider } from '@veramo/did-provider-ethr';
 import {
@@ -45,14 +50,9 @@ import {
 } from '@veramo/key-manager';
 import { KeyManagementSystem } from '@veramo/kms-local';
 import { Resolver } from 'did-resolver';
-// eslint-disable-next-line import/no-extraneous-dependencies
-import { ethers } from 'ethers';
 import { getResolver as ethrDidResolver } from 'ethr-did-resolver';
 
-// import { EbsiDIDProvider } from '../did/ebsi/ebsiDidProvider';
-// import { ebsiDidResolver } from '../did/ebsi/ebsiDidResolver';
-import { KeyDIDProvider } from '../did/key/keyDidProvider';
-import { getDidKeyResolver as keyDidResolver } from '../did/key/keyDidResolver';
+import { getUniversalDidResolver as universalDidResolver } from '../did/universal/universalDidResolver';
 import { getAddressKeyDeriver, snapGetKeysFromAddress } from '../utils/keyPair';
 import { getCurrentAccount, getEnabledVCStores } from '../utils/snapUtils';
 import { getSnapState } from '../utils/stateUtils';
@@ -68,7 +68,9 @@ export type Agent = TAgent<
     IDataStore &
     IResolver &
     IDataManager &
-    ICredentialIssuer
+    ICredentialIssuer &
+    ICredentialVerifier &
+    IOIDCClientPlugin
 >;
 
 export const getAgent = async (
@@ -83,18 +85,15 @@ export const getAgent = async (
   const networks = [
     {
       name: 'mainnet',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      provider: new ethers.providers.Web3Provider(ethereum as any),
+      provider: new Web3Provider(ethereum as any),
     },
     {
       name: '0x05',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      provider: new ethers.providers.Web3Provider(ethereum as any),
+      provider: new Web3Provider(ethereum as any),
     },
     {
       name: 'goerli',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      provider: new ethers.providers.Web3Provider(ethereum as any),
+      provider: new Web3Provider(ethereum as any),
       chainId: '0x5',
     },
   ];
@@ -110,12 +109,12 @@ export const getAgent = async (
       snap,
       account,
     });
-    const res = await snapGetKeysFromAddress(
+    const res = await snapGetKeysFromAddress({
       bip44CoinTypeNode,
       state,
       account,
-      snap
-    );
+      snap,
+    });
     if (!res) throw new Error('Failed to get keys');
     const privateKey = res.privateKey.split('0x')[1];
     console.log('private key: ', privateKey);
@@ -124,14 +123,13 @@ export const getAgent = async (
     //   cosmosPayerSeed: privateKey,
     // });
   }
-  didProviders['did:key'] = new KeyDIDProvider({ defaultKms: 'web3' });
+  didProviders['did:key'] = new MascaKeyDidProvider({ defaultKms: 'web3' });
   didProviders['did:pkh'] = new PkhDIDProvider({ defaultKms: 'web3' });
-  // didProviders['did:ebsi'] = new EbsiDIDProvider({ defaultKms: 'web3' });
   didProviders['did:jwk'] = new JwkDIDProvider({ defaultKms: 'web3' });
 
-  vcStorePlugins['snap'] = new SnapVCStore(snap, ethereum);
+  vcStorePlugins.snap = new SnapVCStore(snap, ethereum);
   if (enabledVCStores.includes('ceramic')) {
-    vcStorePlugins['ceramic'] = new CeramicVCStore(snap, ethereum);
+    vcStorePlugins.ceramic = new CeramicVCStore(snap, ethereum);
   }
   const agent = createAgent<
     IDIDManager &
@@ -139,15 +137,13 @@ export const getAgent = async (
       IDataStore &
       IResolver &
       IDataManager &
-      ICredentialIssuer
+      ICredentialIssuer &
+      ICredentialVerifier &
+      IOIDCClientPlugin
   >({
     plugins: [
       new CredentialPlugin(),
       new CredentialIssuerEIP712(),
-      // new CredentialIssuerLD({
-      //   contextMaps: [LdDefaultContexts],
-      //   suites: [new VeramoEcdsaSecp256k1RecoverySignature2020()],
-      // }),
       new KeyManager({
         store: new MemoryKeyStore(),
         kms: {
@@ -158,11 +154,12 @@ export const getAgent = async (
       new DIDResolverPlugin({
         resolver: new Resolver({
           ...ethrDidResolver({ networks }),
-          ...keyDidResolver(),
+          ...mascaKeyDidResolver(),
           ...pkhDidResolver(),
           ...cheqdDidResolver(),
           // ...ebsiDidResolver(),
           ...jwkDidResolver(),
+          ...universalDidResolver(),
         }),
       }),
       new DIDManager({
@@ -170,6 +167,7 @@ export const getAgent = async (
         defaultProvider: 'metamask',
         providers: didProviders,
       }),
+      new OIDCClientPlugin(),
     ],
   });
   return agent;

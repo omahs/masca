@@ -1,13 +1,18 @@
-import {
+import type {
   CreateVCRequestParams,
   CreateVPRequestParams,
   DeleteVCsRequestParams,
+  HandleOIDCAuthorizationRequestParams,
+  HandleOIDCCredentialOfferRequestParams,
   QueryVCsRequestParams,
   ResolveDIDRequestParams,
   SaveVCRequestParams,
+  SendOIDCAuthorizationResponseParams,
+  SetCeramicSessionRequestParams,
   SetCurrentAccountRequestParams,
   SetVCStoreRequestParams,
   SwitchMethodRequestParams,
+  VerifyDataRequestParams,
 } from './params.js';
 
 export type QueryVCs = {
@@ -82,7 +87,36 @@ export type ResolveDID = {
   params: ResolveDIDRequestParams;
 };
 
+export type VerifyData = {
+  method: 'verifyData';
+  params: VerifyDataRequestParams;
+};
+
 export type SetCurrentAccount = {
   method: 'setCurrentAccount';
   params: SetCurrentAccountRequestParams;
+};
+
+export type HandleOIDCCredentialOffer = {
+  method: 'handleOIDCCredentialOffer';
+  params: HandleOIDCCredentialOfferRequestParams;
+};
+
+export type HandleOIDCAuthorizationRequest = {
+  method: 'handleOIDCAuthorizationRequest';
+  params: HandleOIDCAuthorizationRequestParams;
+};
+
+export type SendOIDCAuthorizationResponse = {
+  method: 'sendOIDCAuthorizationResponse';
+  params: SendOIDCAuthorizationResponseParams;
+};
+
+export type SetCeramicSession = {
+  method: 'setCeramicSession';
+  params: SetCeramicSessionRequestParams;
+};
+
+export type ValidateStoredCeramicSession = {
+  method: 'validateStoredCeramicSession';
 };

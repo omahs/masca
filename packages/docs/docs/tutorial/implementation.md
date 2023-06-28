@@ -20,21 +20,23 @@ Ceramic Network support is experimental and still under development!
 
 Connector has exposed function for installing the Snap.
 
-After snap installation, this function returns `Masca` object that can be used to retrieve snap API.
-An example of initializing Masca and invoking snap API is shown below.
+After the snap installation, this function returns a `Masca` object that can be used to retrieve the snap API.
+An example of initializing Masca and invoking the snap's API is shown below.
+
+For the snap to work properly, it needs to know the address of the connected account. Initially this can be done by passing the address as a parameter to `enableMasca` function. Later, the address can be changed using the `setCurrentAccount` RPC method!
 
 ```typescript
 import { enableMasca } from '@blockchain-lab-um/masca-connector';
 import { isError } from '@blockchain-lab-um/utils';
 
-// install snap and fetch API
-const masca = await enableMasca({
+// Install snap and fetch the Masca API
+const masca = await enableMasca(address, {
   snapId: snapId,
   version: 'latest',
   supportedMethods: ['did:ethr', 'did:key'],
 });
 
-//Check if RPC method failed
+// Check if the RPC method failed
 if(isError(masca)) {
   console.error(setAccountRes.error);
   return;
@@ -52,7 +54,7 @@ Masca Connector will take care of initializing the Snap for other DID methods (N
 Account switching must be handled by the dApp!
 
 ```typescript
-//When account changes in dApp
+// When account changes in dApp
 const setAccountRes = await api.setCurrentAccount({
       currentAccount: address,
 });
@@ -131,7 +133,7 @@ const vcs = await api.queryVCs();
 
 ```typescript
 export type CreateVPRequestParams = {
-  vcs: VCRequest[];
+  vcs: W3CVerifiableCredential[];
   proofFormat?: 'jwt' | 'lds' | 'EthereumEip712Signature2021';
   proofOptions?: {
     type?: string;
@@ -139,16 +141,9 @@ export type CreateVPRequestParams = {
     challenge?: string;
   };
 };
-
-export type VCRequest = {
-  id: string;
-  metadata?: {
-    store?: AvailableVCStores;
-  };
-};
 ```
 
-`vcs` is a list of VCs to be included in a VP. Its an array of objects that need to contain `id` of a VC (Which can be obtained using the `queryVCs` method). `metadata` property is optional and it contains `store` property which defines where to look for VC with id `id`.
+`vcs` is a list of VCs of type `W3CVerifiableCredential`.
 
 `proofFormat` can be jwt, jsonld or EthereumEip712Signature2021.
 
@@ -256,6 +251,18 @@ const res = await api.setVCStore('ceramic', false);
 
 ```typescript
 const didRes = await api.resolveDID('did:ethr:0x01:0x123...4567');
+```
+
+### Verify Data
+
+`verifyData` is used to verify a VC or a VP in Masca.
+
+By default, this RPC method only returns a boolean. This can be changed by setting `verbose` to true, which changes the return type Veramo's `IVerifyResult` object.
+
+```typescript
+const vcRes = await api.verifyData({ credential: VC, verbose: true });
+// OR
+const vpRes = await api.verifyData({ presentation: VP, verbose: true });
 ```
 
 ### Snap Settings

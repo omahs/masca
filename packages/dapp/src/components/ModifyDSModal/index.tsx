@@ -8,10 +8,10 @@ import { Dialog, Transition } from '@headlessui/react';
 import { useTranslations } from 'next-intl';
 import { shallow } from 'zustand/shallow';
 
+import Button from '@/components//Button';
+import ToggleSwitch from '@/components//Switch';
+import DeleteModal from '@/components/DeleteModal';
 import { useMascaStore, useToastStore } from '@/stores';
-import Button from '../Button';
-import DeleteModal from '../DeleteModal';
-import ToggleSwitch from '../Switch';
 
 interface ModifyDSModalProps {
   open: boolean;
@@ -20,26 +20,18 @@ interface ModifyDSModalProps {
 }
 
 function ModifyDSModal({ open, setOpen, vc }: ModifyDSModalProps) {
-  const t = useTranslations('ModifyDS');
+  const t = useTranslations('ModifyDataStoreModal');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const { setTitle, setLoading, setToastOpen, setType } = useToastStore(
-    (state) => ({
-      setTitle: state.setTitle,
-      setText: state.setText,
-      setLoading: state.setLoading,
-      setToastOpen: state.setOpen,
-      setType: state.setType,
-    }),
-    shallow
-  );
+
   const [deleteModalStore, setDeleteModalStore] = useState<
     AvailableVCStores | undefined
   >(undefined);
-  const { enabledStores, api, changeVcs } = useMascaStore(
+  const { enabledStores, api, changeVcs, changeLastFetch } = useMascaStore(
     (state) => ({
       enabledStores: state.availableVCStores,
       api: state.mascaApi,
       changeVcs: state.changeVcs,
+      changeLastFetch: state.changeLastFetch,
     }),
     shallow
   );
@@ -81,34 +73,37 @@ function ModifyDSModal({ open, setOpen, vc }: ModifyDSModalProps) {
       return;
     }
 
-    setLoading(true);
-    setType('normal');
-    setTitle('Saving Credential');
-    setToastOpen(true);
-    setOpen(false);
+    setTimeout(() => {
+      useToastStore.setState({
+        open: true,
+        title: 'Saving credential',
+        type: 'normal',
+        loading: true,
+      });
+    }, 200);
 
     const res = await api.saveVC(vc.data, { store });
 
     if (isError(res)) {
-      setToastOpen(false);
-      setType('error');
       setTimeout(() => {
-        setTitle('Error while saving credential');
-        setLoading(false);
-        setToastOpen(true);
-      }, 100);
-      console.log(res.error);
+        useToastStore.setState({
+          open: true,
+          title: 'Error while saving credential',
+          type: 'error',
+          loading: false,
+        });
+      }, 200);
       return;
     }
 
-    setToastOpen(false);
-
     setTimeout(() => {
-      setType('success');
-      setTitle('Credential saved');
-      setLoading(false);
-      setToastOpen(true);
-    }, 100);
+      useToastStore.setState({
+        open: true,
+        title: 'Credential saved',
+        type: 'success',
+        loading: false,
+      });
+    }, 200);
 
     const vcs = await api.queryVCs();
 
@@ -118,6 +113,7 @@ function ModifyDSModal({ open, setOpen, vc }: ModifyDSModalProps) {
     }
 
     changeVcs(vcs.data);
+    changeLastFetch(Date.now());
   };
 
   return (
@@ -132,7 +128,7 @@ function ModifyDSModal({ open, setOpen, vc }: ModifyDSModalProps) {
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-25 dark:bg-opacity-60" />
+          <div className="fixed inset-0 bg-black/25 dark:bg-black/60" />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
@@ -146,7 +142,7 @@ function ModifyDSModal({ open, setOpen, vc }: ModifyDSModalProps) {
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="dark:bg-navy-blue-500 w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+              <Dialog.Panel className="dark:bg-navy-blue-600 w-full max-w-md overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
                 <Dialog.Title
                   as="h3"
                   className="font-ubuntu dark:text-navy-blue-50 text-xl font-medium leading-6 text-gray-900"
@@ -158,7 +154,7 @@ function ModifyDSModal({ open, setOpen, vc }: ModifyDSModalProps) {
                     {t('desc')}
                   </p>
                 </div>
-                <div className="dark:text-navy-blue-100 mt-10 px-4 text-gray-700">
+                <div className="dark:text-navy-blue-100 mt-10 text-gray-700">
                   {Object.keys(vcStores).map((store, id) => (
                     <div
                       key={id}
@@ -188,7 +184,7 @@ function ModifyDSModal({ open, setOpen, vc }: ModifyDSModalProps) {
                   <div className="mt-10">
                     <Button
                       onClick={() => setOpen(false)}
-                      variant="gray"
+                      variant="done"
                       size="xs"
                     >
                       {t('done')}

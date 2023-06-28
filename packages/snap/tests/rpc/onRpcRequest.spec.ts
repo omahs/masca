@@ -1,14 +1,14 @@
 import {
-  QueryVCsRequestResult,
   availableMethods,
   availableVCStores,
+  type QueryVCsRequestResult,
 } from '@blockchain-lab-um/masca-types';
-import { Result, isError, isSuccess } from '@blockchain-lab-um/utils';
-import { IDataManagerSaveResult } from '@blockchain-lab-um/veramo-datamanager';
+import { isError, isSuccess, type Result } from '@blockchain-lab-um/utils';
+import type { IDataManagerSaveResult } from '@blockchain-lab-um/veramo-datamanager';
 import { DIDDataStore } from '@glazed/did-datastore';
 import { MetaMaskInpageProvider } from '@metamask/providers';
-import { SnapsGlobalObject } from '@metamask/snaps-types';
-import {
+import type { SnapsGlobalObject } from '@metamask/snaps-types';
+import type {
   DIDResolutionResult,
   IIdentifier,
   VerifiableCredential,
@@ -16,21 +16,22 @@ import {
 } from '@veramo/core';
 
 import { onRpcRequest } from '../../src';
-import { StoredCredentials } from '../../src/interfaces';
 import { veramoClearVCs } from '../../src/utils/veramoUtils';
-import { Agent, getAgent } from '../../src/veramo/setup';
+import type { StoredCredentials } from '../../src/veramo/plugins/ceramicDataStore/ceramicDataStore';
+import { getAgent, type Agent } from '../../src/veramo/setup';
 import {
-  address,
+  account,
   exampleDID,
   exampleDIDDocument,
   exampleDIDKey,
   exampleTestKey,
   exampleTestVCPayload,
+  exampleVC,
   getDefaultSnapState,
   jsonPath,
 } from '../testUtils/constants';
 import { createTestVCs } from '../testUtils/generateTestVCs';
-import { SnapMock, createMockSnap } from '../testUtils/snap.mock';
+import { createMockSnap, SnapMock } from '../testUtils/snap.mock';
 
 jest.mock('uuid');
 
@@ -81,20 +82,15 @@ describe('onRpcRequest', () => {
     // Ceramic mock
     DIDDataStore.prototype.get = jest
       .fn()
-      .mockImplementation(async (_key, _did) => {
-        return new Promise((resolve) => {
-          resolve(ceramicData);
-        });
-      });
+      .mockImplementation(async (_key, _did) => Promise.resolve(ceramicData));
 
-    DIDDataStore.prototype.merge = jest
-      .fn()
-      .mockImplementation(async (_key, content, _options?) => {
-        return new Promise((resolve) => {
+    DIDDataStore.prototype.merge = jest.fn().mockImplementation(
+      async (_key, content, _options?) =>
+        new Promise((resolve) => {
           ceramicData = content as StoredCredentials;
           resolve(ceramicData);
-        });
-      });
+        })
+    );
   });
 
   describe('saveVC', () => {
@@ -952,7 +948,7 @@ describe('onRpcRequest', () => {
           jsonrpc: '2.0',
           method: 'createVP',
           params: {
-            vcs: [{ id: saveRes.data[0].id, metadata: { store: 'snap' } }],
+            vcs: [exampleVC],
           },
         },
       })) as Result<VerifiablePresentation>;
@@ -1010,7 +1006,7 @@ describe('onRpcRequest', () => {
           jsonrpc: '2.0',
           method: 'createVP',
           params: {
-            vcs: [{ id: saveRes.data[0].id }],
+            vcs: [exampleVC],
           },
         },
       })) as Result<VerifiablePresentation>;
@@ -1028,47 +1024,6 @@ describe('onRpcRequest', () => {
       // })) as IVerifyResult;
 
       // expect(verifyResult.verified).toBe(true);
-
-      expect.assertions(1);
-    });
-
-    it('should fail creating VP - VC does not exist', async () => {
-      snapMock.rpcMocks.snap_dialog.mockReturnValue(false);
-
-      let res = (await onRpcRequest({
-        origin: 'localhost',
-        request: {
-          id: 'test-id',
-          jsonrpc: '2.0',
-          method: 'saveVC',
-          params: {
-            verifiableCredential: exampleVeramoVCJWT,
-            options: { store: 'snap' },
-          },
-        },
-      })) as Result<unknown>;
-
-      if (isSuccess(res)) {
-        throw new Error('Should return error');
-      }
-
-      res = (await onRpcRequest({
-        origin: 'localhost',
-        request: {
-          id: 'test-id',
-          jsonrpc: '2.0',
-          method: 'createVP',
-          params: {
-            vcs: [{ id: 'test-id' }],
-          },
-        },
-      })) as Result<unknown>;
-
-      if (isSuccess(res)) {
-        throw new Error('Should return error');
-      }
-
-      expect(res.error).toBe('Error: VC does not exist');
 
       expect.assertions(1);
     });
@@ -1264,6 +1219,32 @@ describe('onRpcRequest', () => {
 
       expect(res.data).toBe(
         'did:key:zQ3shW537fJMvkiw69S1FLvBaE8pyzAx4agHu6iaYzTCejuik'
+      );
+
+      expect.assertions(1);
+    });
+
+    it('should succeed switching method to did:key:ebsi and return did', async () => {
+      snapMock.rpcMocks.snap_dialog.mockReturnValue(true);
+
+      const res = (await onRpcRequest({
+        origin: 'localhost',
+        request: {
+          id: 'test-id',
+          jsonrpc: '2.0',
+          method: 'switchDIDMethod',
+          params: {
+            didMethod: 'did:key:ebsi',
+          },
+        },
+      })) as Result<unknown>;
+
+      if (isError(res)) {
+        throw new Error(res.error);
+      }
+
+      expect(res.data).toBe(
+        'did:key:zBhBLmYmyihtomRdJJNEKzbPj51o4a3GYFeZoRHSABKUwqdjiQPY2f6geyy4qmWsbqyd1juUr3tNwKrGCgftPAwFbp1CFFZoyfVwRScvCDcfhuUYaT3YLVrTNmNdmWkKUMEKJjyRXWCTcaTeNdMAvNEKHAUJHrjKBRL29wsznXWnGnqAyhqKvyA'
       );
 
       expect.assertions(1);
@@ -1557,7 +1538,7 @@ describe('onRpcRequest', () => {
         throw new Error(res.error);
       }
 
-      expect(res.data).toEqual(state.accountState[address].accountConfig);
+      expect(res.data).toEqual(state.accountState[account].accountConfig);
 
       expect.assertions(1);
     });
@@ -1656,7 +1637,7 @@ describe('onRpcRequest', () => {
           jsonrpc: '2.0',
           method: 'createVP',
           params: {
-            vcs: [{ id: saveRes.data[0].id, metadata: { store: 'snap' } }],
+            vcs: [exampleVC],
           },
         },
       })) as Result<VerifiablePresentation>;
