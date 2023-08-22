@@ -388,8 +388,8 @@
   },
   "PolygonAuthView": {
     "title": "Polygon Authorization Request",
-    "success": "Succesfully finished Polygon Authorization Request!",
-    "error": "Failed to finish Polygon Authorization Request!",
+    "success": "Succesfully finished Polygon Authorization Request",
+    "error": "Failed to finish Polygon Authorization Request",
     "finished": "Authorization Request finished",
     "switch-to": "Switch to did:polygonid or did:iden3 to continue!",
     "new-scan": "Scan New Code"
