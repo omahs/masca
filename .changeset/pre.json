@@ -19,7 +19,10 @@
   },
   "changesets": [
     "eleven-games-sparkle",
+    "five-countries-design",
+    "green-news-whisper",
     "perfect-lemons-dream",
+    "swift-cherries-push",
     "yellow-games-attack"
   ]
 }

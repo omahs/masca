@@ -1,5 +1,11 @@
 # @blockchain-lab-um/dapp
 
+## 1.0.0-beta.1
+
+### Patch Changes
+
+- [#415](https://github.com/blockchain-lab-um/masca/pull/415) [`6fc209b`](https://github.com/blockchain-lab-um/masca/commit/6fc209b155852065d4f1352eb374ded0846faf7a) Thanks [@andyv09](https://github.com/andyv09)! - Fix some minor dApp problems & improve QR Scanner
+
 ## 1.0.0-beta.0
 
 ### Major Changes

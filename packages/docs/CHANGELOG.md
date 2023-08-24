@@ -1,5 +1,13 @@
 # @blockchain-lab-um/masca-docs
 
+## 1.0.0-beta.1
+
+### Patch Changes
+
+- [#417](https://github.com/blockchain-lab-um/masca/pull/417) [`94b56e9`](https://github.com/blockchain-lab-um/masca/commit/94b56e9c813bfc9d19f995fe0d6a11f9ce52c5ba) Thanks [@martines3000](https://github.com/martines3000)! - Reorder and improves some integration sections.
+
+- [#417](https://github.com/blockchain-lab-um/masca/pull/417) [`94b56e9`](https://github.com/blockchain-lab-um/masca/commit/94b56e9c813bfc9d19f995fe0d6a11f9ce52c5ba) Thanks [@martines3000](https://github.com/martines3000)! - Add separate Polygon ID and OID4VC sections.
+
 ## 1.0.0-beta.0
 
 ### Major Changes
